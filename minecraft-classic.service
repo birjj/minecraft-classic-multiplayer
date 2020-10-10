@@ -1,0 +1,15 @@
+[Unit]
+Description=Minecraft Classic server
+After=network.target
+
+[Service]
+ExecStart=<path-to-node> <path-goes-here>/dist/app.js
+User=<user-goes-here>
+Group=<group-goes-here>
+Restart=always
+WorkingDirectory=<path-goes-here>
+Environment=URL=123.456.789.0
+Environment=PORT=9876
+
+[Install]
+WantedBy=multi-user.target

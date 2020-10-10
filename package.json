@@ -6,7 +6,8 @@
     "author": "birjolaxew",
     "license": "MIT",
     "scripts": {
-        "dev": "ts-node-dev src/app.ts"
+        "dev": "ts-node-dev src/app.ts",
+        "build": "tsc"
     },
     "devDependencies": {
         "@types/body-parser": "^1.19.0",
