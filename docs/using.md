@@ -35,7 +35,7 @@ Second step is to set up the actual redirect rule. You should insert the followi
     </tr>
 </table>
 
-Make sure that the "Example result" shows `localhost:9876/game/multiplayer-enabled`.
+Make sure that the "Example result" shows `localhost:9876/game/multiplayer-enabled`. Finally click "Show advanced options..." and make sure "XMLHttpRequests (Ajax)" is checked.
 
 <p align="center">
     <img src="imgs/step2.png" alt="Second step, showing the values to enter" />
@@ -43,7 +43,7 @@ Make sure that the "Example result" shows `localhost:9876/game/multiplayer-enabl
 
 If you are not hosting the server locally (if you're in doubt, you didn't) then you should replace `localhost:9876` with whatever URL the server admin has given you. For example, if it is instead hosted on `example.com:9999` then your "Redirect to" should be `example.com:9999/$1`.
 
-That's it! You can test if it works by going to [classic.minecraft.net](https://classic.minecraft.net) in your browser, and then copying the URL (which should have a `?join=...`) in it into another browser tab without closing the first. You should now have two players on the same map.
+That's it! You can test if it works by going to [classic.minecraft.net](https://classic.minecraft.net) in your browser. If it worked, your URL will contain `?join=mcmp_`.
 
 <p align="center">
     <img src="imgs/step3.png" alt="Third step, showing another player" />
