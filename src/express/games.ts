@@ -8,33 +8,37 @@ class Game {
     createdAt = Date.now();
     updatedAt = Date.now();
 
-    sockets: ws[] = [];
+    sockets: { [k: string]: ws } = {};
 
     constructor(id: string) {
         this.id = id;
     }
 
-    addSocket(socket: ws) {
-        console.log(
-            "Adding socket to",
-            this.sockets.length,
-            "others in",
-            this.id
-        );
-        this.sockets.push(socket);
+    addSocket(socket: ws, id: string) {
+        if (id in this.sockets) {
+            console.warn("Attempted to overwrite socket", id, this.id);
+            return;
+        }
+        this.sockets[id] = socket;
         socket.on("close", () => {
-            const idx = this.sockets.indexOf(socket);
-            this.sockets.splice(idx, 1);
+            delete this.sockets[id];
         });
     }
     broadcast(message: ws.Data, sender: ws) {
-        console.log("Broadcasting", message, "on", this.id);
-        this.sockets.forEach((socket) => {
-            if (socket === sender) {
-                return;
-            }
-            socket.send(message);
-        });
+        let data: { m: { f: string; t: string; o: "message" } } = null;
+        try {
+            data = JSON.parse(message.toString());
+        } catch (e) {
+            console.warn("Failed to parse message", message);
+            return;
+        }
+
+        const to = data.m.t;
+        if (to in this.sockets) {
+            this.sockets[to].send(message);
+        } else {
+            console.warn("No receiver for message", message);
+        }
     }
 }
 const handler = {
