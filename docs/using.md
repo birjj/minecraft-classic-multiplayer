@@ -41,7 +41,7 @@ Make sure that the "Example result" shows `localhost:9876/game/multiplayer-enabl
     <img src="imgs/step2.png" alt="Second step, showing the values to enter" />
 </p>
 
-If you are not hosting the server locally (if you're in doubt, you didn't) then you should replace `localhost:9876` with whatever URL the server admin has given you. For example, if it is instead hosted on `example.com:9999` then your "Redirect to" should be `example.com:9999/$1`.
+If you are not hosting the server locally (if you're in doubt, you didn't) then you should replace `localhost:9876` with whatever URL the server admin has given you. For example, if it is instead hosted on `https://example.com` then your "Redirect to" should be `https://example.com/$1`.
 
 That's it! You can test if it works by going to [classic.minecraft.net](https://classic.minecraft.net) in your browser. If it worked, your URL will contain `?join=mcmp_`.
 
