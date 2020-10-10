@@ -42,7 +42,7 @@ router.get("/create-channel/:id", (req, res) => {
 router.get("/get-signaling-host/:id/:token", (_, res) => {
     const url = process.env.URL || "localhost";
     const port = process.env.PORT || 9876;
-    res.send({ v: `ws://${url}:${port}` });
+    res.send({ v: `${url === "localhost" ? "ws" : "wss"}://${url}:${port}` });
 });
 router.get("/get-signaling-token/:id/:token", (req, res) => {
     res.send({ v: req.params.id });
