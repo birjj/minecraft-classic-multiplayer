@@ -1,19 +1,7 @@
 import express from "express";
 import url from "url";
 import ws from "ws";
-import { randomString } from "../utils";
-
-// Channels are used to group players that want to communicate together
-const db: { [id: string]: Channel } = {};
-export default db;
-class Channel {
-    id: string;
-    hostID = randomString(8);
-
-    constructor(id: string) {
-        this.id = id;
-    }
-}
+import games from "./games";
 
 // WS
 export const wsServer = new ws.Server({ noServer: true });
@@ -21,19 +9,26 @@ wsServer.on("connection", (socket, req) => {
     const pathname = url.parse(req.url).pathname;
     const idMatch = /\/v2\/(.+)/.exec(pathname);
     const id = idMatch ? idMatch[1] : "";
-
+    const game = games.get(id);
+    if (!game) {
+        console.warn("Attempted to connect to unknown game", id, pathname);
+        return socket.close(1000, `Unknown game ID ${id}`);
+    }
     console.log("Creating WS for", id);
+    game.addSocket(socket);
 
-    socket.on("message", (message) => {
-        if (message !== "ping") {
-            console.log(message);
+    socket.on("message", (msg) => {
+        if (msg === "ping") {
+            return;
         }
+        game.broadcast(msg, socket);
     });
 });
 
 // Express routes
 export const router = express.Router();
 router.get("/create-channel/:id", (req, res) => {
+    /*
     const id = req.params.id;
     if (!id) {
         return res.status(400).send({ error: `Channel ID must be set` });
@@ -41,20 +36,21 @@ router.get("/create-channel/:id", (req, res) => {
     if (db[id]) {
         return res.status(403).send({ error: `Channel ${id} already exists` });
     }
-    db[id] = new Channel(id);
+    db[id] = new Channel(id);*/
     res.send({});
 });
-router.get("/get-signaling-token/:id/host", (req, res) => {
-    const id = req.params.id;
-    if (!id) {
-        return res.status(400).send({ error: `Channel ID must be set` });
-    }
-    const channel = db[id];
-    if (!channel) {
-        return res.status(404).send({ error: `Channel ${id} doesn't exist` });
-    }
-    res.send({ v: channel.hostID });
+router.get("/get-signaling-host/:id/:token", (_, res) => {
+    const url = process.env.URL || "localhost";
+    const port = process.env.PORT || 9876;
+    res.send({ v: `ws://${url}:${port}` });
 });
-router.get("/get-signaling-host/:id/host", (req, res) => {
-    res.send({ v: "ws://localhost:9876" });
+router.get("/get-signaling-token/:id/:token", (req, res) => {
+    res.send({ v: req.params.id });
+});
+router.get("/get-ice-candidates/:id", (req, res) => {
+    res.send({
+        v: {
+            iceServers: { urls: "stun:stun.l.google.com:19302" },
+        },
+    });
 });

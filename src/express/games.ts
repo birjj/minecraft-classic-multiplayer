@@ -1,4 +1,5 @@
 import express from "express";
+import ws from "ws";
 import { randomString } from "../utils";
 
 const db: { [id: string]: Game } = {};
@@ -7,8 +8,33 @@ class Game {
     createdAt = Date.now();
     updatedAt = Date.now();
 
+    sockets: ws[] = [];
+
     constructor(id: string) {
         this.id = id;
+    }
+
+    addSocket(socket: ws) {
+        console.log(
+            "Adding socket to",
+            this.sockets.length,
+            "others in",
+            this.id
+        );
+        this.sockets.push(socket);
+        socket.on("close", () => {
+            const idx = this.sockets.indexOf(socket);
+            this.sockets.splice(idx, 1);
+        });
+    }
+    broadcast(message: ws.Data, sender: ws) {
+        console.log("Broadcasting", message, "on", this.id);
+        this.sockets.forEach((socket) => {
+            if (socket === sender) {
+                return;
+            }
+            socket.send(message);
+        });
     }
 }
 const handler = {
