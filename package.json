@@ -2,11 +2,11 @@
     "name": "minecraft-classic-multiplayer",
     "version": "1.0.0",
     "description": "A multiplayer server for Minecraft Classic, since the official one got shot down",
-    "main": "app.js",
+    "main": "dist/app.js",
     "author": "birjolaxew",
     "license": "MIT",
     "scripts": {
-        "dev": "ts-node-dev src/app.ts",
+        "dev": "ts-node-dev src/server/app.ts",
         "build": "tsc"
     },
     "devDependencies": {
