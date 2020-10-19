@@ -1,6 +1,3 @@
-import { Server } from "connect";
-import type { ServerResponse } from "http";
-
 const alphabet =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-";
 export function randomString(length: number) {
