@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { URL } from "url";
 import { randomString } from "../../utils";
 import { EventEmitter } from "events";
+import fetch from "node-fetch";
 
 type Message = {
     t: "u";
@@ -11,8 +12,11 @@ type Message = {
 
 export default class Connection extends EventEmitter {
     connected = false;
+    private gameCode: string;
     private name: string;
     private server: string;
+    private socket: WebSocket;
+    private iceServers: string[];
 
     constructor(server: string) {
         super();
@@ -33,9 +37,11 @@ export default class Connection extends EventEmitter {
             gameID = "";
         }
         this.name = name;
+        this.gameCode = await this.getGameCode(gameID);
 
         // generate a websocket connection and wait for it to open before resolving
-        const socket = await this.generateWebsocket(name, gameID);
+        const socket = await this.generateWebsocket(name, this.gameCode);
+        this.socket = socket;
         return new Promise((res, rej) => {
             let pingInterval: NodeJS.Timeout;
             socket.on("open", async () => {
@@ -51,22 +57,45 @@ export default class Connection extends EventEmitter {
                 this.connected = false;
                 this.emit("close");
             });
-            socket.on("message", this.handleMessage);
+            socket.on("message", (msg) => this.handleMessage(msg));
             socket.on("error", (err) => rej(err));
         }) as Promise<void>;
     }
 
-    async getIceServers(code: string) {
+    send(to: string, signal: string) {
+        if (!this.connected) {
+            throw new Error("Cannot send on unconnected socket");
+        }
+        const msg: Message = {
+            t: "u",
+            m: {
+                f: `${this.gameCode}/${this.name}`,
+                t: to,
+                o: "message",
+            },
+            p: {
+                signal,
+            },
+        };
+        this.socket.send(JSON.stringify(msg));
+    }
+
+    async getIceServers(code = this.gameCode) {
+        if (code === this.gameCode && this.iceServers) {
+            return this.iceServers;
+        }
+
         const server = ((await (
             await fetch(this.url(`/get-ice-candidates/${code}`))
         ).json()) as {
             v: { iceServers: { urls: string } };
         }).v?.iceServers?.urls;
 
-        if (!server) {
-            return ["stun:stun.l.google.com:19302"];
+        let iceServers = server ? [server] : ["stun:stun.l.google.com:19302"];
+        if (code === this.gameCode) {
+            this.iceServers = iceServers;
         }
-        return [server];
+        return iceServers;
     }
 
     private handleMessage(msg: WebSocket.Data) {
@@ -83,13 +112,13 @@ export default class Connection extends EventEmitter {
         } else {
             console.warn(
                 "Received message intended for someone else",
-                msg.toString()
+                msg.toString(),
+                this.name
             );
         }
     }
 
-    private async generateWebsocket(name: string, gameID: string) {
-        const code = await this.getGameCode(gameID);
+    private async generateWebsocket(name: string, code: string) {
         if (name === "host") {
             await this.createChannel(code);
         }
