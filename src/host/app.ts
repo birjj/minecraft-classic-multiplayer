@@ -1,7 +1,10 @@
 import yargs from "yargs/yargs";
-import { resolve as resolvePath } from "path";
+import { resolve as resolvePath, dirname } from "path";
 import { constants as FS } from "fs";
-import fs from "fs/promises";
+import { promises as fs } from "fs";
+import PeerClient from "./client";
+import Connection from "./communication/connection";
+import { codeFromURL } from "../utils";
 
 const argv = yargs(process.argv.slice(2))
     .command("$0 [file] [url]", "Host a game of Minecraft Classic", (yargs) => {
@@ -34,8 +37,8 @@ type Args = typeof argv & { file: string; url?: string };
 (async (args: Args) => {
     const worldPath = resolvePath(args.storage, args.file);
     const worldExists = await fs
-        .access(worldPath, FS.F_OK)
-        .then((_) => true)
+        .stat(worldPath)
+        .then((stat) => stat.size > 0)
         .catch((_) => false);
 
     // exit if we would overwrite an existing world file
@@ -46,10 +49,23 @@ type Args = typeof argv & { file: string; url?: string };
         process.exit(1);
     }
 
+    // make sure we have the directory for our world file
+    if (!worldExists) {
+        await fs.mkdir(dirname(worldPath), { recursive: true });
+    }
+
     // open the file and start working
     let file: fs.FileHandle;
     try {
         file = await fs.open(worldPath, FS.O_RDWR | FS.O_CREAT);
+        const connection = new Connection(args.server);
+        const code = args.url ? codeFromURL(args.url) : "host";
+        connection.connect(code);
+        if (args.url) {
+            const client = new PeerClient(connection);
+            const world = await client.fetchWorld();
+            console.log("Got world", world.getChanges().length);
+        }
     } finally {
         file?.close();
     }
