@@ -123,7 +123,7 @@ export default class PeerClient extends EventEmitter {
         this.peer.send(JSON.stringify(message));
     }
 
-    private message(text: string) {
+    message(text: string) {
         this.send({
             type: "message",
             message: {

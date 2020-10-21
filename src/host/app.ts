@@ -5,6 +5,8 @@ import { promises as fs } from "fs";
 import PeerClient from "./client";
 import Connection from "./communication/connection";
 import { codeFromURL } from "../utils";
+import World from "./game/world";
+import PeerHost from "./host";
 
 const argv = yargs(process.argv.slice(2))
     .command("$0 [file] [url]", "Host a game of Minecraft Classic", (yargs) => {
@@ -58,13 +60,30 @@ type Args = typeof argv & { file: string; url?: string };
     let file: fs.FileHandle;
     try {
         file = await fs.open(worldPath, FS.O_RDWR | FS.O_CREAT);
-        const connection = new Connection(args.server);
-        const code = args.url ? codeFromURL(args.url) : "host";
-        connection.connect(code);
+        let client: PeerClient;
+        let world: World;
+        let clientConnection: Connection;
+        // fetch world from remote, or generate it ourselves
         if (args.url) {
-            const client = new PeerClient(connection);
-            const world = await client.fetchWorld();
-            console.log("Got world", world.getChanges().length);
+            clientConnection = new Connection(args.server);
+            clientConnection.connect(codeFromURL(args.url));
+            client = new PeerClient(clientConnection);
+            world = await client.fetchWorld();
+        } else {
+            world = new World(Math.floor(99999999999999 * Math.random())); // same upper limit as used by Minecraft Classic
+        }
+
+        // setup our host
+        const connection = new Connection(args.server);
+        await connection.connect("host");
+        const host = new PeerHost(connection, world);
+
+        if (client) {
+            clientConnection?.close();
+            client?.message(
+                `map is now hosted at classic.minecraft.net/?join=${connection.gameCode}`
+            );
+            client?.close();
         }
     } finally {
         file?.close();

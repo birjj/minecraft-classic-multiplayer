@@ -9,6 +9,7 @@ export default class World {
     seed: number;
     size: number;
     private changes: Map<string, BlockChange>;
+    private cachedChangesArr: Omit<BlockChange, "time">[];
 
     constructor(seed: number, size = 128) {
         this.seed = seed;
@@ -17,6 +18,7 @@ export default class World {
     }
 
     addChanges(changes: Omit<BlockChange, "time">[]) {
+        delete this.cachedChangesArr;
         changes.forEach((c) => {
             this.changes.set(c.p.join("-"), {
                 ...c,
@@ -26,16 +28,21 @@ export default class World {
     }
 
     getChanges() {
+        if (this.cachedChangesArr) {
+            return this.cachedChangesArr;
+        }
         const outp: Omit<BlockChange, "time">[] = [];
         for (let c of this.changes.values()) {
             const v = { ...c };
             delete v.time;
             outp.push(c);
         }
+        this.cachedChangesArr = outp;
         return outp;
     }
 
     setBlock(pos: [number, number, number], value: number) {
+        delete this.cachedChangesArr;
         this.changes.set(pos.join("-"), {
             p: pos,
             add: value !== 0,

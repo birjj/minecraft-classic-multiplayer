@@ -12,7 +12,7 @@ type Message = {
 
 export default class Connection extends EventEmitter {
     connected = false;
-    private gameCode: string;
+    gameCode: string;
     private name: string;
     private server: string;
     private socket: WebSocket;
@@ -21,6 +21,12 @@ export default class Connection extends EventEmitter {
     constructor(server: string) {
         super();
         this.server = server;
+    }
+
+    close() {
+        if (this.socket) {
+            this.socket.close();
+        }
     }
 
     async connect(target: string | "host") {
@@ -140,7 +146,10 @@ export default class Connection extends EventEmitter {
         ).json()) as { multiplayerEnabled: boolean })?.multiplayerEnabled;
     }
 
-    private async getGameCode(id = "") {
+    private async getGameCode(id: string) {
+        if (id === "host") {
+            id = "";
+        }
         const code = ((await (await fetch(this.url(`/game/${id}`))).json()) as {
             code: string;
         })?.code;
