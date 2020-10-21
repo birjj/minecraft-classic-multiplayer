@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 
 import routes from "./express/routes";
 import { wsServer } from "./express/channels";
+import { log } from "../log";
 
 const app = express();
 
@@ -36,4 +37,4 @@ server.on("upgrade", (request, socket, head) => {
         wsServer.emit("connection", socket, request);
     });
 });
-console.log(`Listening on ${port}`);
+log(`Listening on ${port}`);
