@@ -1,6 +1,7 @@
 import express from "express";
 import url from "url";
 import ws from "ws";
+import { silly } from "../../log";
 import games from "./games";
 
 // WS
@@ -18,10 +19,12 @@ wsServer.on("connection", (socket, req) => {
     if (!playerId) {
         return socket.close(1000, `Invalid player ID`);
     }
+    silly("New connection for game", game, "from", playerId);
     game.addSocket(socket, playerId);
 
     socket.on("message", (msg) => {
         if (msg === "ping") {
+            game.updatedAt = Date.now();
             return;
         }
         game.broadcast(msg, socket);
@@ -31,15 +34,6 @@ wsServer.on("connection", (socket, req) => {
 // Express routes
 export const router = express.Router();
 router.get("/create-channel/:id", (req, res) => {
-    /*
-    const id = req.params.id;
-    if (!id) {
-        return res.status(400).send({ error: `Channel ID must be set` });
-    }
-    if (db[id]) {
-        return res.status(403).send({ error: `Channel ${id} already exists` });
-    }
-    db[id] = new Channel(id);*/
     res.send({});
 });
 router.get("/get-signaling-host/:id/:token", (_, res) => {

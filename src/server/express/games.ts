@@ -1,6 +1,7 @@
 import express from "express";
 import ws from "ws";
-import { randomString } from "../utils";
+import { silly } from "../../log";
+import { randomString } from "../../utils";
 
 const db: { [id: string]: Game } = {};
 class Game {
@@ -44,6 +45,7 @@ class Game {
 const handler = {
     create: () => {
         const id = `mcmp_${randomString(16)}`;
+        silly("Creating game", id);
         const game = new Game(id);
         db[id] = game;
         return game;
@@ -81,6 +83,7 @@ router.put("/:id/heartbeat", (req, res) => {
             .status(404)
             .send({ error: `No game with ID ${req.params.id}` });
     }
+    silly("Received heartbeat for", req.params.id);
     game.updatedAt = Date.now();
     res.send({});
 });
