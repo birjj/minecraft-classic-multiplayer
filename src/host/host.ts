@@ -5,6 +5,7 @@ import Connection from "./communication/connection";
 import World from "./game/world";
 import { ClientMessage, HostMessage, WelcomeMessage } from "./types";
 import Player from "./game/player";
+import { error, log, silly } from "../log";
 
 export default class PeerHost extends EventEmitter {
     connected = false;
@@ -33,6 +34,7 @@ export default class PeerHost extends EventEmitter {
                 `Attempting to send message to unknown peer "${id}"`
             );
         }
+        silly("Sending message to", id, message);
 
         this.players[id].peer.send(JSON.stringify(message));
     }
@@ -61,7 +63,7 @@ export default class PeerHost extends EventEmitter {
 
         switch (message.type) {
             case "connected":
-                console.log("Client connected", from);
+                log("Client connected", from);
                 this.sendTo(from, {
                     type: "welcomeInfo",
                     gameFull: false,
@@ -76,12 +78,7 @@ export default class PeerHost extends EventEmitter {
                 break;
             case "requestChanges":
                 const changes = this.world.getChanges();
-                console.log(
-                    "Sending world to",
-                    from,
-                    message.from,
-                    changes.length
-                );
+                silly("Sending world to", from, message.from, changes.length);
                 const blocks = changes.slice(message.from, message.from + 1000);
                 if (blocks.length) {
                     this.sendTo(from, {
@@ -102,6 +99,7 @@ export default class PeerHost extends EventEmitter {
     }
 
     private handleSignaling(from: string, signaling: string) {
+        log("Received signaling from new client", from);
         const sender = from.split("/")[1];
         if (!sender) {
             throw new Error(`Invalid sender "${from}"`);
@@ -122,7 +120,7 @@ export default class PeerHost extends EventEmitter {
             this.handleMessage(sender, JSON.parse(data.toString()))
         );
         peer.on("error", (err) => {
-            console.error("Error in host from", sender, err);
+            error("Error in host from", sender, err);
         });
         peer.on("close", () => {
             delete this.players[sender];
