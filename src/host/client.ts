@@ -9,6 +9,7 @@ import {
     HostMessage,
     WelcomeMessage,
 } from "./types";
+import { error, log, silly, warn } from "../log";
 
 export default class PeerClient extends EventEmitter {
     connected = false;
@@ -30,9 +31,10 @@ export default class PeerClient extends EventEmitter {
     }
 
     async fetchWorld(): Promise<World> {
-        console.log("Fetching world", this.connected);
+        silly("Fetching world", this.connected);
         return new Promise((res, rej) => {
             if (!this.connected) {
+                silly("Waiting until connected");
                 this.once("welcome", () => {
                     this.fetchWorld()
                         .then((world) => res(world))
@@ -41,6 +43,10 @@ export default class PeerClient extends EventEmitter {
                 return;
             }
 
+            log("Basing off of world information from host", {
+                seed: this.welcomeInfo.worldSeed,
+                size: this.welcomeInfo.worldSize,
+            });
             const world = new World(
                 this.welcomeInfo.worldSeed,
                 this.welcomeInfo.worldSize
@@ -48,15 +54,15 @@ export default class PeerClient extends EventEmitter {
 
             let index = 0;
             this.message("Synchronizing");
-            const onChanges = (data) => {
+            const onChanges = (data: ChangedBlocksMessage) => {
                 if (data.from !== index) {
-                    console.warn(
+                    warn(
                         `Received out-of-order block changes, expected ${index} got ${data.from}`
                     );
                     return;
                 }
                 world.addChanges(data.blocks);
-
+                silly(`Received new blocks`, data.from, data.blocks.length);
                 if (data.blocks.length >= 1000) {
                     index += 1000;
                     if (this.welcomeInfo.numberOfChangedBlocks >= 1e6) {
@@ -72,6 +78,7 @@ export default class PeerClient extends EventEmitter {
                         from: index,
                     });
                 } else {
+                    silly("Finished receiving blocks");
                     this.message("Synchronized");
                     this.off("changes", onChanges);
                     res(world);
@@ -86,6 +93,7 @@ export default class PeerClient extends EventEmitter {
     }
 
     close() {
+        log("Closing client");
         this.peer.destroy();
     }
 
@@ -111,15 +119,17 @@ export default class PeerClient extends EventEmitter {
             this.handleMessage(JSON.parse(data.toString()))
         );
         this.peer.on("error", (err) => {
-            console.error("Error in client", err);
+            error("Error in client", err);
         });
 
         this.peer.on("connect", () => {
+            silly("Client connected to host");
             this.send({ type: "connected" });
         });
     }
 
     private send(message: ClientMessage) {
+        silly("Sending message to host", message);
         this.peer.send(JSON.stringify(message));
     }
 
@@ -138,7 +148,7 @@ export default class PeerClient extends EventEmitter {
     private handleMessage(message: HostMessage) {
         switch (message.type) {
             case "welcomeInfo":
-                console.log("Received welcome information");
+                log("Received welcome information");
                 this.connected = true;
                 this.welcomeInfo = message;
                 this.emit("welcome", message);

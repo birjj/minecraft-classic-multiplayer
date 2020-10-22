@@ -1,7 +1,7 @@
 import express from "express";
 import url from "url";
 import ws from "ws";
-import { silly } from "../../log";
+import { silly, warn } from "../../log";
 import games from "./games";
 
 // WS
@@ -12,7 +12,7 @@ wsServer.on("connection", (socket, req) => {
     const gameId = idMatch ? idMatch[1] : "";
     const game = games.get(gameId);
     if (!game) {
-        console.warn("Attempted to connect to unknown game", gameId, pathname);
+        warn("Attempted to connect to unknown game", gameId, pathname);
         return socket.close(1000, `Unknown game ID ${gameId}`);
     }
     const playerId = idMatch ? idMatch[2] : "";

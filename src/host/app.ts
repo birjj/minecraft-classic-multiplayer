@@ -7,6 +7,7 @@ import Connection from "./communication/connection";
 import { codeFromURL } from "../utils";
 import World from "./game/world";
 import PeerHost from "./host";
+import { error } from "../log";
 
 const argv = yargs(process.argv.slice(2))
     .command("$0 [file] [url]", "Host a game of Minecraft Classic", (yargs) => {
@@ -45,7 +46,7 @@ type Args = typeof argv & { file: string; url?: string };
 
     // exit if we would overwrite an existing world file
     if (args.url && worldExists) {
-        console.error(
+        error(
             `World file would be overwritten. Delete ${worldPath} and try again`
         );
         process.exit(1);
@@ -57,39 +58,35 @@ type Args = typeof argv & { file: string; url?: string };
     }
 
     // open the file and start working
-    let file: fs.FileHandle;
-    try {
-        file = await fs.open(worldPath, FS.O_RDWR | FS.O_CREAT);
-        let client: PeerClient;
-        let world: World;
-        let clientConnection: Connection;
-        // fetch world from remote, or generate it ourselves
-        if (args.url) {
-            clientConnection = new Connection(args.server);
-            clientConnection.connect(codeFromURL(args.url));
-            client = new PeerClient(clientConnection);
-            world = await client.fetchWorld();
-        } else {
-            world = new World(Math.floor(99999999999999 * Math.random())); // same upper limit as used by Minecraft Classic
-        }
+    const file = await fs.open(worldPath, FS.O_RDWR | FS.O_CREAT);
+    let client: PeerClient;
+    let world: World;
+    let clientConnection: Connection;
 
-        // setup our host
-        const connection = new Connection(args.server);
-        await connection.connect("host");
-        const host = new PeerHost(connection, world);
+    // fetch world from remote, or generate it ourselves
+    if (args.url) {
+        clientConnection = new Connection(args.server);
+        clientConnection.connect(codeFromURL(args.url));
+        client = new PeerClient(clientConnection);
+        world = await client.fetchWorld();
+    } else {
+        world = new World(Math.floor(99999999999999 * Math.random())); // same upper limit as used by Minecraft Classic
+    }
 
-        if (client) {
-            clientConnection?.close();
-            client?.message(
-                `map is now hosted at classic.minecraft.net/?join=${connection.gameCode}`
-            );
-            client?.close();
-        }
-    } finally {
-        file?.close();
+    // setup our host
+    const connection = new Connection(args.server);
+    await connection.connect("host");
+    const host = new PeerHost(connection, world);
+
+    if (client) {
+        clientConnection?.close();
+        client?.message(
+            `Map is now hosted at classic.minecraft.net/?join=${connection.gameCode}`
+        );
+        client?.close();
     }
 })(argv as Args).catch((e) => {
-    console.error("Error while executing:");
-    console.error(e);
+    error("Error while executing:");
+    error(e);
     process.exit(1);
 });

@@ -1,6 +1,6 @@
 import express from "express";
 import ws from "ws";
-import { silly } from "../../log";
+import { silly, warn } from "../../log";
 import { randomString } from "../../utils";
 
 const db: { [id: string]: Game } = {};
@@ -17,7 +17,7 @@ class Game {
 
     addSocket(socket: ws, id: string) {
         if (id in this.sockets) {
-            console.warn("Attempted to overwrite socket", id, this.id);
+            warn("Attempted to overwrite socket", id, this.id);
             return;
         }
         this.sockets[id] = socket;
@@ -30,7 +30,7 @@ class Game {
         try {
             data = JSON.parse(message.toString());
         } catch (e) {
-            console.warn("Failed to parse message", message);
+            warn("Failed to parse message", message);
             return;
         }
 
@@ -38,7 +38,7 @@ class Game {
         if (to in this.sockets) {
             this.sockets[to].send(message);
         } else {
-            console.warn("No receiver for message", message);
+            warn("No receiver for message", message);
         }
     }
 }

@@ -3,6 +3,7 @@ import { URL } from "url";
 import { randomString } from "../../utils";
 import { EventEmitter } from "events";
 import fetch from "node-fetch";
+import { silly, warn } from "../../log";
 
 type Message = {
     t: "u";
@@ -24,6 +25,7 @@ export default class Connection extends EventEmitter {
     }
 
     close() {
+        silly("Closing connection", this.gameCode);
         if (this.socket) {
             this.socket.close();
         }
@@ -33,6 +35,7 @@ export default class Connection extends EventEmitter {
         if (!(await this.checkEnabled())) {
             throw new Error("Server reported that multiplayer is offline");
         }
+        silly("Creating connection with target", target);
 
         // if connecting to an existing game, generate a random name
         // otherwise use "host" and let server generate game ID
@@ -109,14 +112,14 @@ export default class Connection extends EventEmitter {
         try {
             data = JSON.parse(msg.toString());
         } catch (e) {
-            console.warn("Received invalid WebSocket message", msg.toString());
+            warn("Received invalid WebSocket message", msg.toString());
             return;
         }
 
         if (data.m.t === this.name) {
             this.emit("message", data);
         } else {
-            console.warn(
+            warn(
                 "Received message intended for someone else",
                 msg.toString(),
                 this.name
