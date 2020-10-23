@@ -5,6 +5,7 @@ import Connection from "./communication/connection";
 import World from "./game/world";
 import {
     ClientMessage,
+    FireMessage,
     HostMessage,
     PlayerStateMessage,
     RequestChangesMessage,
@@ -53,10 +54,15 @@ export default class PeerHost extends EventEmitter {
         this.players[id].peer.send(JSON.stringify(message));
     }
 
-    private broadcast(message: HostMessage) {
+    private broadcast(message: HostMessage, except: string[] = []) {
+        const blacklisted: { [k: string]: boolean } = {};
+        except.forEach((v) => (blacklisted[v] = true));
         Object.keys(this.players).forEach((id) => {
             const player = this.players[id];
             if (!player.connected) {
+                return;
+            }
+            if (blacklisted[id]) {
                 return;
             }
             this.sendTo(id, message);
@@ -107,6 +113,18 @@ export default class PeerHost extends EventEmitter {
                 break;
             case "playerState":
                 this.handlePlayerState(from, message);
+                break;
+            case "fireEvent":
+                this.handleFireEvent(from, message);
+                break;
+            case "message":
+                Object.values(this.players).forEach((p) => {
+                    p.registerChatMessage(message.message);
+                    this.sendTo(p.id, {
+                        type: "chatLog",
+                        chatLog: p.chatLog,
+                    });
+                });
                 break;
             default:
                 warn("Unsupported message", message);
@@ -165,6 +183,15 @@ export default class PeerHost extends EventEmitter {
         };
     }
 
+    private handleFireEvent(from: string, message: FireMessage) {
+        this.broadcast(message, [from]);
+        const change = message.data;
+        const pos = change.addMode
+            ? change.targetedBlockAdjacentPosition
+            : change.targetedBlockPosition;
+        this.world.setBlock(pos, change.addMode ? change.chosenBlock + 1 : 0);
+    }
+
     private handleSignaling(from: string, signaling: string) {
         log("Received signaling from new client", from);
         const sender = from.split("/")[1];
@@ -190,7 +217,17 @@ export default class PeerHost extends EventEmitter {
             error("Error in host from", sender, err);
         });
         peer.on("close", () => {
+            this.players[sender].close();
             delete this.players[sender];
+            Object.values(this.players).forEach((p) => {
+                p.registerChatMessage({
+                    from: sender,
+                    message: "",
+                    timestamp: Date.now(),
+                    type: "left",
+                });
+                this.sendTo(p.id, { type: "chatLog", chatLog: p.chatLog });
+            });
         });
     }
 }
