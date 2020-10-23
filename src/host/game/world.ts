@@ -8,45 +8,42 @@ type BlockChange = {
 export default class World {
     seed: number;
     size: number;
-    private changes: Map<string, BlockChange>;
-    private cachedChangesArr: Omit<BlockChange, "time">[];
+    private changes: BlockChange[] = [];
 
     constructor(seed: number, size = 128) {
         this.seed = seed;
         this.size = size;
-        this.changes = new Map();
+    }
+
+    get numChanges() {
+        return this.changes.length;
     }
 
     addChanges(changes: Omit<BlockChange, "time">[]) {
-        delete this.cachedChangesArr;
-        changes.forEach((c) => {
-            this.changes.set(c.p.join("-"), {
+        this.changes = this.changes.concat(
+            changes.map((c) => ({
                 ...c,
                 time: Date.now(),
-            });
+            }))
+        );
+    }
+
+    getChanges(
+        from = 0,
+        to = this.changes.length
+    ): Omit<BlockChange, "time">[] {
+        return this.changes.slice(from, to).map((c) => {
+            const v = { ...c };
+            delete v.time;
+            return v;
         });
     }
 
-    getChanges() {
-        if (this.cachedChangesArr) {
-            return this.cachedChangesArr;
-        }
-        const outp: Omit<BlockChange, "time">[] = [];
-        for (let c of this.changes.values()) {
-            const v = { ...c };
-            delete v.time;
-            outp.push(c);
-        }
-        this.cachedChangesArr = outp;
-        return outp;
-    }
-
     setBlock(pos: [number, number, number], value: number) {
-        delete this.cachedChangesArr;
-        this.changes.set(pos.join("-"), {
-            p: pos,
+        this.changes.push({
             add: value !== 0,
             bt: value,
+            p: [...pos],
             time: Date.now(),
         });
     }

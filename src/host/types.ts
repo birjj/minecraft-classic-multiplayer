@@ -68,7 +68,13 @@ export type ConnectedMessage = {
 export type PlayerStateMessage = {
     type: "playerState";
     data: {
-        state: any; // TODO: specify
+        state: {
+            name: string;
+            position: { x: number; y: number; z: number };
+            rotation: { x: number; y: number; z: number };
+            walking: boolean;
+            spawned: boolean;
+        };
     };
 };
 export type SetBlockMessage = {

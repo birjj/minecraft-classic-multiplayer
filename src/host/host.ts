@@ -3,16 +3,22 @@ import wrtc from "wrtc";
 import { EventEmitter } from "events";
 import Connection from "./communication/connection";
 import World from "./game/world";
-import { ClientMessage, HostMessage, WelcomeMessage } from "./types";
+import {
+    ClientMessage,
+    HostMessage,
+    PlayerStateMessage,
+    RequestChangesMessage,
+    WelcomeMessage,
+} from "./types";
 import Player from "./game/player";
-import { error, log, silly } from "../log";
+import { error, log, silly, warn } from "../log";
 
 export default class PeerHost extends EventEmitter {
     connected = false;
     world: World;
     private connection: Connection;
     private players: { [k: string]: Player } = {};
-    private welcomeInfo: WelcomeMessage;
+    private updateInterval: NodeJS.Timeout;
 
     constructor(connection: Connection, world: World) {
         super();
@@ -22,10 +28,16 @@ export default class PeerHost extends EventEmitter {
         this.connection.on("message", (msg) =>
             this.handleSignaling(msg.m.f, msg.p.signal)
         );
+
+        this.updateInterval = setInterval(() => this.update(), 50);
     }
 
     close() {
         Object.values(this.players).forEach((player) => player.close());
+    }
+
+    private update() {
+        this.broadcastPlayers();
     }
 
     private sendTo(id: string, message: HostMessage) {
@@ -34,9 +46,21 @@ export default class PeerHost extends EventEmitter {
                 `Attempting to send message to unknown peer "${id}"`
             );
         }
-        silly("Sending message to", id, message);
 
+        if (!this.players[id].connected) {
+            return;
+        }
         this.players[id].peer.send(JSON.stringify(message));
+    }
+
+    private broadcast(message: HostMessage) {
+        Object.keys(this.players).forEach((id) => {
+            const player = this.players[id];
+            if (!player.connected) {
+                return;
+            }
+            this.sendTo(id, message);
+        });
     }
 
     private message(id: string, message: string) {
@@ -55,47 +79,90 @@ export default class PeerHost extends EventEmitter {
         this.sendTo(id, { type: "chatLog", chatLog: this.players[id].chatLog });
     }
 
-    private handleMessage(from: string, message: ClientMessage) {
-        const player = this.players[from];
-        if (!player) {
-            throw new Error(`Received message from unknown player "${from}"`);
-        }
+    private broadcastPlayers() {
+        const players = Object.keys(this.players)
+            .map((id) => {
+                const p = this.players[id];
+                if (!p.state) {
+                    return undefined;
+                }
+                return {
+                    name: p.state?.name || "",
+                    id: id,
+                    state: p.state,
+                };
+            })
+            .filter((v) => v);
+        this.broadcast({ type: "players", players });
+    }
 
+    private handleMessage(from: string, message: ClientMessage) {
         switch (message.type) {
             case "connected":
                 log("Client connected", from);
-                this.sendTo(from, {
-                    type: "welcomeInfo",
-                    gameFull: false,
-                    hostName: "test",
-                    maxPlayers: 999,
-                    numberOfChangedBlocks: this.world.getChanges().length,
-                    playerCount: Object.keys(this.players).length,
-                    spawnPoint: null,
-                    worldSeed: this.world.seed,
-                    worldSize: this.world.size,
-                });
+                this.sendWelcome(from);
                 break;
             case "requestChanges":
-                const changes = this.world.getChanges();
-                silly("Sending world to", from, message.from, changes.length);
-                const blocks = changes.slice(message.from, message.from + 1000);
-                if (blocks.length) {
-                    this.sendTo(from, {
-                        type: "changedBlocks",
-                        blocks: blocks,
-                        from: message.from,
-                    });
-                    this.message(
-                        from,
-                        `Synchronizing (${Math.round(
-                            (100 * message.from) / changes.length
-                        )}%)`
-                    );
-                }
-
+                this.sendChanges(from, message);
                 break;
+            case "playerState":
+                this.handlePlayerState(from, message);
+                break;
+            default:
+                warn("Unsupported message", message);
         }
+    }
+
+    private sendWelcome(to: string) {
+        this.sendTo(to, {
+            type: "welcomeInfo",
+            gameFull: false,
+            hostName: "test",
+            maxPlayers: 999,
+            numberOfChangedBlocks: this.world.getChanges().length,
+            playerCount: Object.keys(this.players).length,
+            spawnPoint: null,
+            worldSeed: this.world.seed,
+            worldSize: this.world.size,
+        });
+    }
+
+    private sendChanges(from: string, message: RequestChangesMessage) {
+        const blocks = this.world.getChanges(message.from, message.from + 1000);
+        if (message.from !== this.world.numChanges) {
+            silly(
+                "Sending world to",
+                from,
+                message.from,
+                this.world.numChanges
+            );
+        }
+        if (blocks.length) {
+            this.sendTo(from, {
+                type: "changedBlocks",
+                blocks: blocks,
+                from: message.from,
+            });
+            this.message(
+                from,
+                `Synchronizing (${Math.round(
+                    (100 * message.from) / this.world.numChanges
+                )}%)`
+            );
+        }
+    }
+
+    private handlePlayerState(from: string, message: PlayerStateMessage) {
+        const player = this.players[from];
+        if (!player) {
+            throw new Error(
+                `Received player state from unknown player "${from}"`
+            );
+        }
+
+        player.state = {
+            ...message.data.state,
+        };
     }
 
     private handleSignaling(from: string, signaling: string) {
