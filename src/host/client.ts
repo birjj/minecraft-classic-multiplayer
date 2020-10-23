@@ -52,9 +52,16 @@ export default class PeerClient extends EventEmitter {
                 this.welcomeInfo.worldSize
             );
 
+            // if remote doesn't have any data, they won't send a message (really Mojang?)
+            const noResponseTimeout = setTimeout(() => {
+                silly("Didn't receive a response, presuming no changes");
+                res(world);
+            }, 500);
+
             let index = 0;
             this.message("Synchronizing");
             const onChanges = (data: ChangedBlocksMessage) => {
+                clearTimeout(noResponseTimeout);
                 if (data.from !== index) {
                     warn(
                         `Received out-of-order block changes, expected ${index} got ${data.from}`
@@ -155,6 +162,10 @@ export default class PeerClient extends EventEmitter {
                 break;
             case "changedBlocks":
                 this.emit("changes", message);
+            case "players":
+                break;
+            default:
+                warn("Unsupported message", message);
         }
     }
 
