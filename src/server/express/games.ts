@@ -54,6 +54,8 @@ const handler = {
     get: (id: string) => {
         return db[id];
     },
+
+    getAll: () => db,
 };
 export default handler;
 
