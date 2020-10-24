@@ -161,12 +161,19 @@ export default class PeerHost extends EventEmitter {
                 blocks: blocks,
                 from: message.from,
             });
-            this.message(
-                from,
-                `Synchronizing (${Math.round(
-                    (100 * message.from) / this.world.numChanges
-                )}%)`
-            );
+            if (this.world.numChanges - message.from > 1000) {
+                this.message(
+                    from,
+                    `Synchronizing (${Math.round(
+                        (100 *
+                            Math.min(
+                                message.from + 1000,
+                                this.world.numChanges
+                            )) /
+                            this.world.numChanges
+                    )}%)`
+                );
+            }
         }
     }
 
@@ -186,9 +193,21 @@ export default class PeerHost extends EventEmitter {
     private handleFireEvent(from: string, message: FireMessage) {
         this.broadcast(message, [from]);
         const change = message.data;
+
         const pos = change.addMode
             ? change.targetedBlockAdjacentPosition
             : change.targetedBlockPosition;
+
+        // destroy all trees in a single hit
+        if (!change.addMode) {
+            const block = this.world.getBlock(pos);
+            silly("Player destroyed block", block);
+            if (block === 14 || block === 13) {
+                this.world.floodFill(pos, [13, 14], 0);
+                this.sendChanges(from, { from: 0, type: "requestChanges" });
+            }
+        }
+
         this.world.setBlock(pos, change.addMode ? change.chosenBlock + 1 : 0);
     }
 

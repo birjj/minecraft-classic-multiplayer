@@ -1,3 +1,6 @@
+import { error, silly } from "../../log";
+import { generateLevel } from "./worldGen/worker";
+
 type BlockChange = {
     p: [number, number, number];
     add: boolean;
@@ -8,11 +11,38 @@ type BlockChange = {
 export default class World {
     seed: number;
     size: number;
+    private tiles: number[] = [];
     private changes: BlockChange[] = [];
 
     constructor(seed: number, size = 128) {
         this.seed = seed;
         this.size = size;
+
+        silly("Generating world", seed, size);
+        try {
+            this.tiles = generateLevel({ seed, worldSize: size });
+        } catch (e) {
+            error(e);
+        }
+        silly("Generated world", this.tiles.length);
+
+        /*let counts: { [k: string]: number } = {};
+        for (let i = 0; i < this.tiles.length; ++i) {
+            const val = this.tiles[i];
+            counts[val] = (counts[val] || 0) + 1;
+            if (val === 1 || val === 3) {
+                let index = i;
+                const x = index % size;
+                index = (index - x) / size;
+                const z = index % size;
+                index = (index - z) / size;
+                const y = index;
+
+                const newBlock = Math.floor(Math.random() * (39 - 24) + 24);
+                this.setBlock([x, y, z], newBlock);
+            }
+        }
+        silly("Counts", counts);*/
     }
 
     get numChanges() {
@@ -40,11 +70,77 @@ export default class World {
     }
 
     setBlock(pos: [number, number, number], value: number) {
+        const [x, y, z] = pos;
+
         this.changes.push({
             add: value !== 0,
             bt: value,
-            p: [...pos],
+            p: pos,
             time: Date.now(),
         });
+
+        const index = (y * this.size + z) * this.size + x;
+        if (index >= this.tiles.length) {
+            error(
+                "Attempted to set block out of bounds",
+                [x, y, z],
+                this.tiles.length
+            );
+        } else {
+            this.tiles[index] = value;
+        }
+    }
+
+    getBlock([x, y, z]: [number, number, number]) {
+        const index = (y * this.size + z) * this.size + x;
+        if (index >= this.tiles.length) {
+            error("Index is out of bounds", [x, y, z], this.tiles.length);
+            return 0;
+        }
+        return this.tiles[index];
+    }
+
+    floodFill(from: [number, number, number], through: number[], to: number) {
+        let i = 0;
+        const seen: Set<string> = new Set();
+        const whitelist: Set<number> = new Set();
+        through.forEach((v) => whitelist.add(v));
+        const isInBounds = ([x, y, z]: [number, number, number]) =>
+            x >= 0 &&
+            x < this.size &&
+            y >= 0 &&
+            y < 64 &&
+            z >= 0 &&
+            z < this.size;
+        const step = ([x, y, z]: [number, number, number]) => {
+            if (i > 1e6) {
+                return;
+            }
+            ++i;
+            const neighbors: [number, number, number][] = [
+                [x, y + 1, z], // up
+                [x, y - 1, z], // down
+                [x - 1, y, z], // left
+                [x + 1, y, z], // right
+                [x, y, z - 1], // in
+                [x, y, z + 1], // out
+            ];
+            neighbors.forEach((pos) => {
+                if (!isInBounds(pos)) {
+                    return;
+                }
+                const key = pos.join("-");
+                if (seen.has(key)) {
+                    return;
+                }
+                seen.add(key);
+                const block = this.getBlock(pos);
+                if (whitelist.has(block)) {
+                    this.setBlock(pos, to);
+                    step(pos);
+                }
+            });
+        };
+        step(from);
     }
 }
