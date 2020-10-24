@@ -1,7 +1,21 @@
 import express from "express";
 import ws from "ws";
-import { silly, warn } from "../../log";
+import { log, silly, warn } from "../../log";
 import { randomString } from "../../utils";
+
+const TTL = 2 * 60 * 1000;
+setInterval(() => {
+    const now = Date.now();
+    Object.keys(db).forEach((id) => {
+        const game = db[id];
+        const delta = now - game.updatedAt;
+        if (delta >= TTL) {
+            log("Game", id, "expired");
+            game.close();
+            delete db[id];
+        }
+    });
+}, 30000);
 
 const db: { [id: string]: Game } = {};
 class Game {
@@ -40,6 +54,12 @@ class Game {
         } else {
             warn("No receiver for message", message);
         }
+    }
+    close() {
+        Object.keys(this.sockets).forEach((id) => {
+            this.sockets[id].close();
+            delete this.sockets[id];
+        });
     }
 }
 const handler = {
