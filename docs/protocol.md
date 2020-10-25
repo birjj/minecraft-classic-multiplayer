@@ -150,7 +150,7 @@ All P2P messages are stringified JSON objects, with the required key `"type"` be
     }
   ]
 }</code></pre></td>
-      <td>Sent whenever any player sends a chat message. <code>chatLog</code> array is the 20 most recent messages seen by the host, <i>not</i> only new messages. Messages of type <code>"local"</code> are displayed in yellow without sender name, <code>"left"</code> are appended with <code>" left the game"</code>, and <code>"joined"</code> are appended with <code>" joined the game"</code></td>
+      <td>Sent whenever any player sends a chat message. <code>chatLog</code> array is a list of new messages to add to the player's chat log. Messages of type <code>"local"</code> are displayed in yellow without sender name, <code>"left"</code> are appended with <code>" left the game"</code>, and <code>"joined"</code> are appended with <code>" joined the game"</code></td>
     </tr>
     <tr>
       <td><pre><code>{
