@@ -1,3 +1,4 @@
+import { EventEmitter } from "events";
 import { error, silly } from "../../log";
 import { BlockID } from "../types";
 import { generateLevel } from "./worldGen/worker";
@@ -9,13 +10,14 @@ type BlockChange = {
     time: number;
 };
 
-export default class World {
+export default class World extends EventEmitter {
     seed: number;
     size: number;
     private tiles: number[] = [];
     private changes: BlockChange[] = [];
 
     constructor(seed: number, size = 128) {
+        super();
         this.seed = seed;
         this.size = size;
 
@@ -55,12 +57,13 @@ export default class World {
     setBlock(pos: [number, number, number], value: number) {
         const [x, y, z] = pos;
 
-        this.changes.push({
+        const change = {
             add: value !== 0,
             bt: value,
             p: pos,
             time: Date.now(),
-        });
+        };
+        this.changes.push(change);
 
         const index = (y * this.size + z) * this.size + x;
         if (index >= this.tiles.length) {
@@ -76,6 +79,8 @@ export default class World {
         if (value === BlockID.SPONGE) {
             this.handleSponge(pos);
         }
+
+        this.emit("change", change);
     }
 
     getBlock([x, y, z]: [number, number, number]) {
@@ -152,4 +157,17 @@ export default class World {
         };
         step(from);
     }
+}
+
+type WorldEvents = {
+    change: (change: BlockChange) => void;
+};
+
+export default interface World {
+    on<E extends keyof WorldEvents>(event: E, listener: WorldEvents[E]): this;
+    once<E extends keyof WorldEvents>(event: E, listener: WorldEvents[E]): this;
+    emit<E extends keyof WorldEvents>(
+        event: E,
+        ...args: Parameters<WorldEvents[E]>
+    ): boolean;
 }
