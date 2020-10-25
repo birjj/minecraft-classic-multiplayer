@@ -3,7 +3,7 @@ Description=Minecraft Classic server
 After=network.target
 
 [Service]
-ExecStart=<path-to-node> <path-goes-here>/dist/app.js
+ExecStart=<path-to-node> <path-goes-here>/dist/server/app.js
 User=<user-goes-here>
 Group=<group-goes-here>
 Restart=always
