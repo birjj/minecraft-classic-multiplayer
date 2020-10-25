@@ -10,7 +10,7 @@ First step is to find your way to Redirector's settings page. You can do this by
     <img src="imgs/step1.png" alt="First step, showing the buttons to click" />
 </p>
 
-Second step is to set up the actual redirect rule. You should insert the following values:
+Second step is to set up the actual redirect rule. At the time of writing I am hosting a server on `https://mcc.jfagerberg.me`. To use it, you should insert the following values:
 
 <table>
     <tr>
@@ -27,7 +27,7 @@ Second step is to set up the actual redirect rule. You should insert the followi
     </tr>
     <tr>
         <td><b>Redirect to</b></td>
-        <td><code>localhost:9876/$1</code></td>
+        <td><code>https://mcc.jfagerberg.me/$1</code></td>
     </tr>
     <tr>
         <td><b>Pattern type</b></td>
@@ -35,13 +35,13 @@ Second step is to set up the actual redirect rule. You should insert the followi
     </tr>
 </table>
 
-Make sure that the "Example result" shows `localhost:9876/game/multiplayer-enabled`. Finally click "Show advanced options..." and make sure "XMLHttpRequests (Ajax)" is checked.
+Make sure that the "Example result" shows `https://mcc.jfagerberg.me/game/multiplayer-enabled`. Finally click "Show advanced options..." and make sure "XMLHttpRequests (Ajax)" is checked.
 
 <p align="center">
     <img src="imgs/step2.png" alt="Second step, showing the values to enter" />
 </p>
 
-If you are not hosting the server locally (if you're in doubt, you didn't) then you should replace `localhost:9876` with whatever URL the server admin has given you. For example, if it is instead hosted on `https://example.com` then your "Redirect to" should be `https://example.com/$1`.
+If you are hosting the server locally (if you're in doubt, you didn't) then you should replace `https://mcc.jfagerberg.me` with `http://localhost:9876`.
 
 That's it! You can test if it works by going to [classic.minecraft.net](https://classic.minecraft.net) in your browser. If it worked, your URL will contain `?join=mcmp_`.
 
