@@ -26,24 +26,6 @@ export default class World {
             error(e);
         }
         silly("Generated world", this.tiles.length);
-
-        /*let counts: { [k: string]: number } = {};
-        for (let i = 0; i < this.tiles.length; ++i) {
-            const val = this.tiles[i];
-            counts[val] = (counts[val] || 0) + 1;
-            if (val === 1 || val === 3) {
-                let index = i;
-                const x = index % size;
-                index = (index - x) / size;
-                const z = index % size;
-                index = (index - z) / size;
-                const y = index;
-
-                const newBlock = Math.floor(Math.random() * (39 - 24) + 24);
-                this.setBlock([x, y, z], newBlock);
-            }
-        }
-        silly("Counts", counts);*/
     }
 
     get numChanges() {
