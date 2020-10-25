@@ -6,9 +6,9 @@ Although the actual multiplayer code is peer-to-peer, the client relies on a web
 
 # Installing (server)
 
-Clone this repo onto a server. Make sure NodeJS and Yarn are installed, then run `yarn install` in the cloned directory. Finally run `yarn dev` to start the server (production mode is not yet implemented).
+Clone this repo onto a server. Make sure NodeJS and Yarn are installed, then run `yarn install` in the cloned directory. Finally run `yarn dev` to start the server in development mode.
 
-The server can be configured by setting the environment variables `URL` and `PORT` to the public-facing URL/IP of your server and the port you want the application to listen to, respectively. I would recommend setting these to the correct values in `minecraft-classic.service`, and then running `install.sh`. This will make sure the server is kept alive as a systemd service.
+The server can be configured by setting the environment variables `URL` and `PORT` to the public-facing URL/IP of your server and the port you want the application to listen to, respectively. If running in production, I would recommend setting these to the correct values in `minecraft-classic.service` and then running `install.sh`. This will make sure the server is kept alive as a systemd service.
 
 Note that you will need to run the server behind a reverse proxy (e.g. NGINX), configured to proxy both HTTP and WebSocket, and to serve an HTTPS certificate for your given URL. This is required because Mojang's Minecraft Classic domain runs on HTTPS, so browsers will refuse to connect to a domain that runs on HTTP.
 
