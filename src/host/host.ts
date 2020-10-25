@@ -76,13 +76,17 @@ export default class PeerHost extends EventEmitter {
             );
         }
 
-        this.players[id].registerChatMessage({
-            from: "",
-            message: `<host>: ${message}`,
-            timestamp: Date.now(),
-            type: "local",
+        this.sendTo(id, {
+            type: "chatLog",
+            chatLog: [
+                {
+                    from: "",
+                    message: `<host>: ${message}`,
+                    timestamp: Date.now(),
+                    type: "local",
+                },
+            ],
         });
-        this.sendTo(id, { type: "chatLog", chatLog: this.players[id].chatLog });
     }
 
     private broadcastPlayers() {
@@ -119,10 +123,9 @@ export default class PeerHost extends EventEmitter {
                 break;
             case "message":
                 Object.values(this.players).forEach((p) => {
-                    p.registerChatMessage(message.message);
                     this.sendTo(p.id, {
                         type: "chatLog",
-                        chatLog: p.chatLog,
+                        chatLog: [message.message],
                     });
                 });
                 break;
@@ -239,13 +242,17 @@ export default class PeerHost extends EventEmitter {
             this.players[sender].close();
             delete this.players[sender];
             Object.values(this.players).forEach((p) => {
-                p.registerChatMessage({
-                    from: sender,
-                    message: "",
-                    timestamp: Date.now(),
-                    type: "left",
+                this.sendTo(p.id, {
+                    type: "chatLog",
+                    chatLog: [
+                        {
+                            from: sender,
+                            message: "",
+                            timestamp: Date.now(),
+                            type: "left",
+                        },
+                    ],
                 });
-                this.sendTo(p.id, { type: "chatLog", chatLog: p.chatLog });
             });
         });
     }

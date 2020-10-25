@@ -6,7 +6,6 @@ export default class Player {
     id: string;
     peer: Peer.Instance;
     connected: boolean = false;
-    chatLog: ChatMessage[] = [];
     state?: PlayerStateMessage["data"]["state"];
 
     constructor(id: string, peer: Peer.Instance) {
@@ -23,10 +22,5 @@ export default class Player {
 
     close() {
         this.peer.destroy();
-    }
-
-    registerChatMessage(msg: ChatMessage) {
-        this.chatLog.push(msg);
-        this.chatLog = this.chatLog.slice(-20);
     }
 }
