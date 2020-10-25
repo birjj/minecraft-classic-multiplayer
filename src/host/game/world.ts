@@ -1,4 +1,5 @@
 import { error, silly } from "../../log";
+import { BlockID } from "../types";
 import { generateLevel } from "./worldGen/worker";
 
 type BlockChange = {
@@ -89,6 +90,10 @@ export default class World {
         } else {
             this.tiles[index] = value;
         }
+
+        if (value === BlockID.SPONGE) {
+            this.handleSponge(pos);
+        }
     }
 
     getBlock([x, y, z]: [number, number, number]) {
@@ -98,6 +103,28 @@ export default class World {
             return 0;
         }
         return this.tiles[index];
+    }
+
+    handleSponge([x, y, z]: [number, number, number]) {
+        for (let dx = -2; dx <= 2; ++dx) {
+            for (let dy = -2; dy <= 2; ++dy) {
+                for (let dz = -2; dz <= 2; ++dz) {
+                    if (dx === 0 && dy === 0 && dz === 0) {
+                        continue;
+                    }
+                    const pos = [x + dx, y + dy, z + dz] as [
+                        number,
+                        number,
+                        number
+                    ];
+
+                    const block = this.getBlock(pos);
+                    if (block === BlockID.WATER) {
+                        this.setBlock(pos, BlockID.AIR);
+                    }
+                }
+            }
+        }
     }
 
     floodFill(from: [number, number, number], through: number[], to: number) {
