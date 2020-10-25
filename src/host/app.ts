@@ -7,7 +7,7 @@ import Connection from "./communication/connection";
 import { codeFromURL } from "../utils";
 import World from "./game/world";
 import PeerHost from "./host";
-import { error } from "../log";
+import { error, log, silly, warn } from "../log";
 
 const argv = yargs(process.argv.slice(2))
     .command("$0 [file] [url]", "Host a game of Minecraft Classic", (yargs) => {
@@ -69,14 +69,41 @@ type Args = typeof argv & { file: string; url?: string };
         clientConnection.connect(codeFromURL(args.url));
         client = new PeerClient(clientConnection);
         world = await client.fetchWorld();
+        file.write(JSON.stringify({ seed: world.seed, size: world.size }));
     } else {
-        world = new World(Math.floor(99999999999999 * Math.random())); // same upper limit as used by Minecraft Classic
+        if (!worldExists) {
+            world = new World(Math.floor(99999999999999 * Math.random())); // same upper limit as used by Minecraft Classic
+            file.write(JSON.stringify({ seed: world.seed, size: world.size }));
+        } else {
+            silly("Reading world data from file");
+            const fileData = await file.readFile();
+            const worldData = fileData.toString().split("|");
+            const { seed, size } = JSON.parse(worldData[0]);
+            world = new World(seed, size);
+            const changes = [];
+            worldData.forEach((change, i) => {
+                if (i === 0 || !change) {
+                    return;
+                }
+                try {
+                    changes.push(JSON.parse(change));
+                } catch (e) {
+                    warn("Failed to parse change from world file", change);
+                }
+            });
+            world.addChanges(changes);
+            silly("Finished reading", changes.length, "changes from file");
+        }
     }
 
     // setup our host
     const connection = new Connection(args.server);
     await connection.connect("host");
     const host = new PeerHost(connection, world);
+    world.on("change", (change) => {
+        file.write(`|${JSON.stringify(change)}`);
+    });
+    log(`World hosted at classic.minecraft.net/?join=${connection.gameCode}`);
 
     if (client) {
         clientConnection?.close();
