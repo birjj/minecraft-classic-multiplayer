@@ -201,16 +201,6 @@ export default class PeerHost extends EventEmitter {
             ? change.targetedBlockAdjacentPosition
             : change.targetedBlockPosition;
 
-        // destroy all trees in a single hit
-        if (!change.addMode) {
-            const block = this.world.getBlock(pos);
-            silly("Player destroyed block", block);
-            if (block === 14 || block === 13) {
-                this.world.floodFill(pos, [13, 14], 0);
-                this.sendChanges(from, { from: 0, type: "requestChanges" });
-            }
-        }
-
         this.world.setBlock(pos, change.addMode ? change.chosenBlock + 1 : 0);
     }
 
