@@ -1,3 +1,6 @@
+> [!WARNING]
+> This project is old, and relies on libraries that haven't been updated since Node 14. No further updates will be pushed, but the repo is kept up in read-only form for posterity.
+
 # Minecraft Classic Multiplayer Server
 
 [Minecraft Classic](https://classic.minecraft.net) is an early version of Minecraft that Mojang have made publicly available on their website. Although it is a very simple game, a niché speedrunning community sprung up around it in 2020. Unfortunately Mojang shut down the Minecraft Classic multiplayer servers in 2019, and have never put them back up.
